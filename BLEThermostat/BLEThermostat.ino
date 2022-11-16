@@ -1,8 +1,12 @@
 #include <ArduinoBLE.h>
 #include "DHT.h"
+#include <U8x8lib.h>
+#include <Wire.h>
 
-#define DHTPIN D1
-#define DHTTYPE DHT22
+U8X8_SSD1306_128X64_NONAME_HW_I2C u8x8(/* clock=*/ PIN_WIRE_SCL, /* data=*/ PIN_WIRE_SDA, /* reset=*/ U8X8_PIN_NONE);   // OLEDs without Reset of the Display
+
+#define DHTPIN 0
+#define DHTTYPE DHT11
 DHT dht(DHTPIN, DHTTYPE);
 
 #define RELAYPIN D2
@@ -33,6 +37,9 @@ float currentHumidity;
 void setup() {
   Serial.begin(9600);
   //while (!Serial);
+
+  u8x8.begin();
+  u8x8.setFlipMode(1);   // set number from 1 to 3, the screen word will rotary 180
  
   // set pin mode
   pinMode(redLED, OUTPUT);
@@ -82,9 +89,15 @@ void loop() {
   // if a central is connected to peripheral:
   if (central) {
     Serial.print("Connected to central: ");
+    u8x8.setFont(u8x8_font_chroma48medium8_r);
+    u8x8.setCursor(0, 0);
+    u8x8.print("Connected: ");
     // print the central's MAC address:
     Serial.println(central.address());
- 
+    u8x8.setCursor(0, 1);
+    u8x8.print(central.address().substring(0,8));
+    u8x8.setCursor(0, 2);
+    u8x8.print(central.address().substring(9,17));
     // while the central is still connected to peripheral:
     while (central.connected()) {
 
@@ -107,6 +120,10 @@ void loop() {
         temperatureChar.writeValue(String(currentTemperature, 2));
         Serial.print(F("Set new temperature: "));
         Serial.println(setTemperature);
+        u8x8.setCursor(0, 4);
+        u8x8.print("Set Temp: ");
+        u8x8.setCursor(11, 4);
+        u8x8.print(setTemperature);
       }
   
       getTemperatureAndHumidity();
@@ -116,6 +133,8 @@ void loop() {
     // when the central disconnects, print it out:
     Serial.print(F("Disconnected from central: "));
     Serial.println(central.address());
+    //u8x8.setCursor(0, 0);
+    //u8x8.print("Disconnected");
   }
   //relay output should be handled even if BT is not connected
   getTemperatureAndHumidity();
@@ -131,14 +150,25 @@ void getTemperatureAndHumidity() {
     currentTemperature = dht.readTemperature();
     if (isnan(currentHumidity) || isnan(currentTemperature)) {
       Serial.println(F("Failed to read from DHT sensor!"));
-      return;
+      //return;
     }
     Serial.print(F("Humidity: "));
     Serial.println(currentHumidity);
     humidityChar.writeValue(String(currentHumidity, 2));
+    
+    u8x8.setCursor(0, 6);
+    u8x8.print("H: ");
+    u8x8.setCursor(4, 6);
+    u8x8.print(currentHumidity);
+    
     Serial.print(F("Temperature: "));
     Serial.println(currentTemperature);
     temperatureChar.writeValue(String(currentTemperature, 2));
+
+    u8x8.setCursor(0, 7);
+    u8x8.print("T: ");
+    u8x8.setCursor(4, 7);
+    u8x8.print(currentTemperature);
   }
 }
 
